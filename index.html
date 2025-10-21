@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projekt-Navigator – Start</title>
+  <meta name="description" content="Interaktiver Navigator und Projektarbeit – Übersicht, Demo und Kontakt.">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="header">
+  <div class="container nav">
+    <div class="brand">Projekt‑Navigator</div>
+    <nav>
+      <a href="#navigator">Navigator</a>
+      <a href="#how">Wirkprinzip</a>
+      <a href="#about">Über mich</a>
+      <a href="#legal">Rechtliches</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <div>
+      <h1>Einfach starten: Dein Navigationsmodell für den Einstieg in KI</h1>
+      <p class="lead">Eine schlanke, interaktive Visualisierung, die Unternehmen hilft, schnell ins Handeln zu kommen – mit Fokus auf Führung, Personalentwicklung, Informationsfluss, Technologie u.v.m.</p>
+      <div class="badges">
+        <span class="badge">Deutsch</span>
+        <span class="badge">Responsiv</span>
+        <span class="badge">Ohne Cookies</span>
+      </div>
+      <div class="cta">
+        <a class="button" href="#navigator">Navigator öffnen</a>
+        <a class="button secondary" href="#about">Mehr über mich</a>
+      </div>
+    </div>
+    <div class="imgcard">
+      <img src="./assets/hero-demo.png" alt="Demo Navigator" style="width:100%;border-radius:10px;">
+      <div class="meta" style="padding:8px">Demo‑Abbildung. Ersetze sie später durch ein GIF oder einen Screenshot deines Navigators.</div>
+    </div>
+  </section>
+
+  <section id="navigator" class="section">
+    <h2>Interaktiver Navigator</h2>
+    <p class="lead">Hier wird dein Navigator eingebunden. Aktuell ist ein Platzhalter gesetzt. Sobald dein Navigator online erreichbar ist (eigene URL), tausche die <code>src</code>-Adresse unten aus.</p>
+    <div class="iframe-wrap">
+      <!-- TODO: Ersetze die src-URL durch deine live-URL, z. B. https://deine-domain.tld/navigator -->
+      <iframe src="about:blank" title="Navigator (Platzhalter)" loading="lazy" allow="clipboard-write; fullscreen"></iframe>
+    </div>
+    <div class="tagbar">
+      <span class="tag">Führung</span>
+      <span class="tag">Personalentwicklung</span>
+      <span class="tag">Informationsfluss</span>
+      <span class="tag">Technologie</span>
+      <span class="tag">Vision & Werte</span>
+      <span class="tag">Motivation & Arbeitsatmosphäre</span>
+      <span class="tag">Innovationsfreude</span>
+      <span class="tag">Fehler‑ & Konfliktkultur</span>
+      <span class="tag">Produkte & Dienstleistungen</span>
+      <span class="tag">Ressourceneffizienz & Nachhaltigkeit</span>
+      <span class="tag">Stakeholderbeziehungen</span>
+      <span class="tag">Prozesse</span>
+    </div>
+  </section>
+
+  <section id="how" class="section">
+    <h2>Worauf der Navigator basiert & was er bringt</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Grundlage</h3>
+        <p>Der Navigator baut auf einem Wechselwirkungs‑Modell mit zwölf Faktoren auf (u. a. Führung, Personalentwicklung, Informationsfluss, Technologie, Vision & Werte). Die Faktoren werden hinsichtlich aktueller Ausprägung und gewünschtem Ziel bewertet; daraus ergeben sich Gap‑Analysen und Prioritäten.</p>
+        <p class="meta">Ziel: einen <em>klaren, anschlussfähigen Startpunkt</em> für KI‑Vorhaben und organisatorische Veränderungen schaffen.</p>
+      </div>
+      <div class="card">
+        <h3>Stärken</h3>
+        <ul>
+          <li>Visualisiert komplexe Zusammenhänge sofort verständlich</li>
+          <li>Priorisiert Handlungsfelder datenbasiert statt gefühlsbasiert</li>
+          <li>Fördert gemeinsames Verständnis zwischen Bereichen und Ebenen</li>
+          <li>Leichtgewichtig – ideal für den Einstieg</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="chatbot" class="section">
+    <h2>Chatbot‑Assistent (Demo)</h2>
+    <p class="lead">Beantwortet Fragen zur Projektarbeit und kann auf Wunsch eine <strong>Sofort‑Analyse</strong> erstellen: Branche, Unternehmensgröße und Standort eingeben – daraus werden Startwerte je Faktor vorgeschlagen und an den Navigator übergeben.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Fragen zur Projektarbeit</h3>
+        <label for="q" class="meta">Deine Frage</label>
+        <textarea id="q" rows="5" style="width:100%;margin-top:6px"></textarea>
+        <div class="cta" style="margin-top:10px">
+          <button class="button" id="askBtn">Frage stellen</button>
+          <button class="button secondary" id="clearBtn">Leeren</button>
+        </div>
+        <div id="answer" class="meta" style="margin-top:12px">(Demo‑Antwort erscheint hier. In der echten Version wird dein Projekttext als Wissensbasis genutzt.)</div>
+      </div>
+      <div class="card">
+        <h3>Sofort‑Analyse: Startwerte vorschlagen</h3>
+        <div class="grid-2">
+          <div>
+            <label class="meta">Branche</label>
+            <select id="branch" style="width:100%">
+              <option>Fertigung</option>
+              <option>Dienstleistung</option>
+              <option>Handel</option>
+              <option>Öffentliche Verwaltung</option>
+              <option>Gesundheit</option>
+              <option>IT & Software</option>
+            </select>
+          </div>
+          <div>
+            <label class="meta">Unternehmensgröße</label>
+            <select id="size" style="width:100%">
+              <option>Kleines Unternehmen (&lt;50)</option>
+              <option>Mittelstand (50–249)</option>
+              <option>Großunternehmen (250+)</option>
+            </select>
+          </div>
+          <div>
+            <label class="meta">Standort</label>
+            <select id="region" style="width:100%">
+              <option>Deutschland</option>
+              <option>EU (ohne DE)</option>
+              <option>USA</option>
+              <option>Global</option>
+            </select>
+          </div>
+        </div>
+        <div class="cta" style="margin-top:10px">
+          <button class="button" id="analyzeBtn">Vorschläge erstellen</button>
+          <button class="button secondary" id="sendBtn">In Navigator übernehmen</button>
+        </div>
+        <div id="scoresWrap" style="margin-top:12px;overflow:auto">
+          <table id="scores" class="table meta">
+            <thead>
+              <tr><th>Faktor</th><th style="text-align:right">Wert (1–10)</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="meta" style="margin-top:10px">Hinweis: Dies ist eine <strong>Frontend‑Demo</strong>. In der echten Implementierung erfolgt die Berechnung serverseitig (API) und kann mit deiner Projektarbeit verknüpft werden.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section">
+    <h2>Über mich</h2>
+    <p class="lead">Strategisch denkend, datengetrieben und menschenzentriert – ich begleite Organisationen beim sinnvollen und nachhaltigen Einstieg in KI.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Profil</h3>
+        <p>Team Lead & Product Owner Hintergrund, Fokus auf Digitalisierungsprojekten und Enablement. Ich entwickle klare, umsetzbare Roadmaps und befähige Teams, die nächsten Schritte souverän zu gehen.</p>
+        <p class="meta">Derzeit in beruflicher Neuorientierung (ALG I). Diese Zeile ist optional.</p>
+      </div>
+      <div class="card">
+        <h3>Was ich mit dem Navigator zeigen möchte</h3>
+        <p>Ein niederschwelliger, interaktiver Einstieg in komplexe Veränderungsvorhaben – visuell, transparent und anschlussfähig für alle Bereiche im Unternehmen.</p>
+        <ul class="meta">
+          <li>Strukturiertes Vorgehen statt Over‑Engineering</li>
+          <li>Klare Priorisierung über Wirkungsfaktoren</li>
+          <li>Gemeinsames Verständnis & Kommunikation</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="legal" class="section">
+    <h2>Kontakt & rechtliche Hinweise</h2>
+    <div class="card">
+      <p><strong>Kontakt & rechtliche Hinweise</strong><br>
+      Diese Website ist ein persönliches, nicht‑kommerzielles Projekt zur Darstellung einer Projektarbeit.<br>
+      Sie verfolgt keine wirtschaftlichen Zwecke und erhebt keine personenbezogenen Daten.<br><br>
+      Verantwortlich für den Inhalt: [Vorname Nachname]<br>
+      E‑Mail: <a href="mailto:deine@email.de">deine@email.de</a><br><br>
+      Keine Gewähr für Vollständigkeit, Richtigkeit oder Aktualität der Inhalte.<br>
+      Diese Website enthält keine Werbung, keine Affiliate‑Links und keine Angebote im Sinne des § 5 TMG.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    © <span id="y"></span> Dein Name. – Minimaler Website‑Starter. <a href="#legal">Rechtliches</a>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("y").textContent = new Date().getFullYear();
+
+  // Chat (Demo)
+  const askBtn = document.getElementById('askBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const answer = document.getElementById('answer');
+  askBtn?.addEventListener('click', ()=>{
+    const q = document.getElementById('q').value.trim();
+    answer.textContent = q ? `Demo: Deine Frage war "${q}". In der echten Version würde der Bot die Projektarbeit durchsuchen und eine konkrete, zitierte Antwort geben.` : 'Bitte gib eine Frage ein.';
+  });
+  clearBtn?.addEventListener('click', ()=>{
+    document.getElementById('q').value='';
+    answer.textContent='(Demo‑Antwort erscheint hier. In der echten Version wird dein Projekttext als Wissensbasis genutzt.)';
+  });
+
+  // Sofort‑Analyse (Demo)
+  const FACTORS = [
+    'Personalentwicklung & Lernbereitschaft',
+    'Führungsverhalten',
+    'Stakeholderbeziehungen',
+    'Prozesse',
+    'Informationsfluss & Kommunikation',
+    'Technologie',
+    'Vision & Werte',
+    'Motivation & Arbeitsatmosphäre',
+    'Innovationsfreude',
+    'Fehler‑ & Konfliktkultur',
+    'Produkte & Dienstleistungen',
+    'Ressourceneffizienz & Nachhaltigkeit'
+  ];
+
+  function seededScore(seed){
+    let x = 0; for (let i=0;i<seed.length;i++) x = (x*31 + seed.charCodeAt(i))>>>0;
+    return 1 + (x % 10);
+  }
+  function proposeScores(branch,size,region){
+    const seed = `${branch}|${size}|${region}`;
+    return FACTORS.map((f,i)=>{
+      const base = seededScore(seed + i);
+      const adj = (
+        (branch.includes('Fertigung') && (f.includes('Prozesse')||f.includes('Ressourcen')) ? +1 : 0) +
+        (branch.includes('IT') && (f.includes('Technologie')||f.includes('Informationsfluss')) ? +1 : 0) +
+        (size.includes('Groß') && (f.includes('Prozesse')||f.includes('Führung')) ? +1 : 0) +
+        (region.includes('USA') && f.includes('Innovationsfreude') ? +1 : 0)
+      );
+      return { factor:f, value: Math.max(1, Math.min(10, base + adj)) };
+    });
+  }
+  function renderScores(rows){
+    const tbody = document.querySelector('#scores tbody');
+    tbody.innerHTML = rows.map(r=>`<tr><td>${r.factor}</td><td style="text-align:right">${r.value}</td></tr>`).join('');
+  }
+  document.getElementById('analyzeBtn')?.addEventListener('click', ()=>{
+    const rows = proposeScores(
+      document.getElementById('branch').value,
+      document.getElementById('size').value,
+      document.getElementById('region').value
+    );
+    renderScores(rows);
+  });
+  document.getElementById('sendBtn')?.addEventListener('click', ()=>{
+    const rows = Array.from(document.querySelectorAll('#scores tbody tr')).map(tr=>({
+      factor: tr.children[0].textContent,
+      value: Number(tr.children[1].textContent)
+    }));
+    const iframe = document.querySelector('#navigator iframe');
+    iframe?.contentWindow?.postMessage({ type:'preload-scores', payload: rows }, '*');
+    alert('Vorschlagswerte wurden (Demo) an den Navigator gesendet. Bitte iFrame‑Integration implementieren.');
+  });
+</script>
+</body>
+</html>
