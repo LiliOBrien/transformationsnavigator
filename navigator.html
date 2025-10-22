@@ -1,25 +1,196 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Navigator – eingebettete Ansicht</title>
-  <style>
-    html,body{margin:0;padding:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-    #app{height:100vh}
-    /* Optional: hellgrauer Hintergrund, damit es sauber wirkt */
-    body{background:#fff}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigator – eingebettete Ansicht</title>
+<style>
+  :root{
+    --fg:#1f2937; --muted:#6b7280; --border:#e5e7eb; --accent:#2563eb; --bg:#ffffff; --card:#f9fafb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:18px}
+  .card{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:14px}
+  h1{font-size:20px;margin:0 0 6px}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:6px;border-bottom:1px solid var(--border)}
+  th{text-align:left;color:var(--muted)}
+  input[type=number]{width:64px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  button{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .help{font-size:13px;color:var(--muted)}
+  .chartbox{aspect-ratio:1/1; width:100%; max-width:680px; margin:auto; background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center}
+  svg{width:100%;height:100%}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+</style>
 </head>
 <body>
-  <!-- HIER kommt NUR dein Navigator rein -->
-  <div id="app">
-    <!-- Beispiel: Wenn dein Navigator eine eigene URL hat, nutze ein weiteres iframe: -->
-    <!-- <iframe src="https://DEINE-NAVIGATOR-APP.vercel.app" style="border:0;width:100%;height:100%"></iframe> -->
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <h1>Faktoren & Werte</h1>
+      <div class="meta">Werte 1–10 anpassen oder per Konfigurator von der Hauptseite übernehmen.</div>
+      <div class="toolbar">
+        <button id="resetBtn">Zurücksetzen</button>
+        <button id="fillBtn">Alles = 5</button>
+        <button id="randomBtn">Zufällig</button>
+        <button id="copyBtn">Werte kopieren</button>
+      </div>
+      <table id="tbl">
+        <thead><tr><th>Faktor</th><th style="text-align:right">Wert</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="help">Tipp: Von der Hauptseite können Vorschlagswerte via <code>postMessage</code> gesendet werden (Typ: <code>preload-scores</code>).</div>
+    </div>
 
-    <!-- Falls dein Navigator als Web-Komponente oder Script existiert, initialisiere ihn hier -->
-    <!-- <script src="navigator.umd.js"></script>
-    <script> NavigatorApp.mount(document.getElementById('app')); </script> -->
+    <div class="card">
+      <h1>Radar</h1>
+      <div class="meta">Das Diagramm aktualisiert sich live bei jeder Änderung.</div>
+      <div class="chartbox"><svg id="radar" viewBox="0 0 600 600" role="img" aria-label="Radar Chart"></svg></div>
+    </div>
   </div>
+</div>
+
+<script>
+/* ------------------ Faktoren-Setup ------------------ */
+const FACTORS = [
+ 'Personalentwicklung & Lernbereitschaft',
+ 'Führungsverhalten',
+ 'Stakeholderbeziehungen',
+ 'Prozesse',
+ 'Informationsfluss & Kommunikation',
+ 'Technologie',
+ 'Vision & Werte',
+ 'Motivation & Arbeitsatmosphäre',
+ 'Innovationsfreude',
+ 'Fehler- & Konfliktkultur',
+ 'Produkte & Dienstleistungen',
+ 'Ressourceneffizienz & Nachhaltigkeit'
+];
+
+let scores = FACTORS.map(() => 5); // Start mit 5ern
+
+/* ------------------ UI Aufbau ------------------ */
+const tbody = document.querySelector('#tbl tbody');
+function renderTable(){
+  tbody.innerHTML = FACTORS.map((f,i)=>`
+    <tr>
+      <td>${f}</td>
+      <td style="text-align:right">
+        <input type="number" min="1" max="10" step="1" value="${scores[i]}" data-idx="${i}">
+      </td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const idx = +e.target.dataset.idx;
+      let v = parseInt(e.target.value||'0',10); if(isNaN(v)) v=1;
+      scores[idx] = Math.max(1, Math.min(10, v));
+      drawRadar();
+    });
+  });
+}
+
+/* ------------------ Radar (SVG) ------------------ */
+const svg = document.getElementById('radar');
+const cx=300, cy=300, R=240, rings=5;
+
+function polarToXY(angleRad, radius){
+  return [cx + radius*Math.sin(angleRad), cy - radius*Math.cos(angleRad)];
+}
+
+function drawGrid(){
+  // clear
+  svg.innerHTML = '';
+  // concentric rings
+  for(let r=R; r>0; r-=R/rings){
+    const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circ.setAttribute('cx', cx); circ.setAttribute('cy', cy);
+    circ.setAttribute('r', r);
+    circ.setAttribute('fill','none');
+    circ.setAttribute('stroke','#e5e7eb');
+    svg.appendChild(circ);
+  }
+  // axes + labels
+  FACTORS.forEach((f, i)=>{
+    const a = i * (2*Math.PI/FACTORS.length);
+    const [x,y] = polarToXY(a, R);
+    const axis = document.createElementNS('http://www.w3.org/2000/svg','line');
+    axis.setAttribute('x1', cx); axis.setAttribute('y1', cy);
+    axis.setAttribute('x2', x);  axis.setAttribute('y2', y);
+    axis.setAttribute('stroke', '#e5e7eb');
+    svg.appendChild(axis);
+
+    // label
+    const [lx,ly] = polarToXY(a, R+18);
+    const lab = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lab.setAttribute('x', lx); lab.setAttribute('y', ly);
+    lab.setAttribute('fill', '#6b7280'); lab.setAttribute('font-size','11'); lab.setAttribute('text-anchor','middle');
+    lab.textContent = f;
+    svg.appendChild(lab);
+  });
+}
+
+function drawPolygon(){
+  const pts = scores.map((v,i)=>{
+    const a = i * (2*Math.PI/FACTORS.length);
+    const r = (v/10)*R;
+    const [x,y]=polarToXY(a,r);
+    return `${x},${y}`;
+  }).join(' ');
+  const polyFill = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  polyFill.setAttribute('points', pts);
+  polyFill.setAttribute('fill','rgba(37,99,235,0.16)');
+  polyFill.setAttribute('stroke','#2563eb');
+  polyFill.setAttribute('stroke-width','2');
+  svg.appendChild(polyFill);
+}
+
+function drawRadar(){
+  drawGrid(); drawPolygon();
+}
+
+/* ------------------ Controls ------------------ */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  scores = FACTORS.map(()=>5);
+  renderTable(); drawRadar();
+});
+document.getElementById('fillBtn').addEventListener('click', ()=>{
+  scores = FACTORS.map(()=>5);
+  renderTable(); drawRadar();
+});
+document.getElementById('randomBtn').addEventListener('click', ()=>{
+  scores = FACTORS.map(()=> 1 + Math.floor(Math.random()*10) );
+  renderTable(); drawRadar();
+});
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const data = FACTORS.map((f,i)=>({factor:f, value:scores[i]}));
+  navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
+});
+
+/* ------------------ postMessage: preload-scores ------------------ */
+window.addEventListener('message', (e)=>{
+  const msg = e.data;
+  if(!msg || typeof msg !== 'object') return;
+  if(msg.type === 'preload-scores' && Array.isArray(msg.payload)){
+    // payload: [{factor, value}]
+    const map = new Map(msg.payload.map(o=>[o.factor, o.value]));
+    scores = FACTORS.map(f => {
+      const v = map.get(f);
+      return Math.max(1, Math.min(10, Number.isFinite(v)? v : 5));
+    });
+    renderTable(); drawRadar();
+  }
+});
+
+/* ------------------ Init ------------------ */
+renderTable(); drawRadar();
+// optional: Parent informieren, falls du Auto-Resize möchtest
+try { parent.postMessage({type:'resize-iframe', height: document.body.scrollHeight }, '*'); } catch {}
+</script>
 </body>
 </html>
