@@ -1,196 +1,399 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Navigator – eingebettete Ansicht</title>
-<style>
-  :root{
-    --fg:#1f2937; --muted:#6b7280; --border:#e5e7eb; --accent:#2563eb; --bg:#ffffff; --card:#f9fafb;
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Info } from "lucide-react";
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
+
+const MODEL = {
+  factors: [
+    "Personalentwicklung & Lernbereitschaft",
+    "Führungsverhalten",
+    "Stakeholderbeziehungen",
+    "Prozesse",
+    "Informationsfluss & Kommunikation",
+    "Technologie",
+    "Vision & Werte",
+    "Motivation & Arbeitsatmosphäre",
+    "Innovationsfreude",
+    "Fehler- & Konfliktkultur",
+    "Produkte und Dienstleistungen",
+    "Ressourceneffizienz & Nachhaltigkeit",
+  ],
+  influence: [
+    [2,0,2,1,2,1,0,1,0,1,2,1], // Personalentwicklung
+    [0,0,1,2,2,2,1,2,1,2,1,1], // Führungsverhalten (angepasst aus Führung)
+    [0,0,0,1,1,0,1,0,2,1,0,2], // Stakeholderbeziehungen
+    [2,0,0,0,1,2,0,1,1,2,1,0], // Prozesse
+    [1,1,1,2,0,1,1,0,0,0,1,0], // Informationsfluss
+    [0,1,0,2,1,0,0,0,2,1,0,0], // Technologie
+    [2,1,1,0,1,1,0,0,1,1,1,0], // Vision & Werte
+    [1,1,2,1,0,1,0,0,2,0,1,1], // Motivation
+    [0,0,1,0,0,0,0,0,2,1,2,0], // Innovation
+    [1,1,0,1,1,0,1,0,0,0,1,0], // Konflikt
+    [0,0,0,1,1,0,2,1,0,2,0,1], // Produkte
+    [0,0,0,1,0,0,0,1,1,0,1,0], // Ressourceneffizienz
+  ],
+} as const;
+
+const clampInt = (v: number, lo = 1, hi = 10): number => {
+  const n = Number.isFinite(v) ? Math.round(v) : lo;
+  return Math.max(lo, Math.min(hi, n));
+};
+
+function propagate(
+  base: number[],
+  deltas: number[],
+  influence: number[][],
+  sensitivity: number
+): number[] {
+  const n = base.length;
+  const acc = base.slice();
+
+  for (let i = 0; i < n; i++) {
+    const di = deltas[i] || 0;
+    if (di === 0) continue;
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      acc[j] = acc[j] + di * (influence[i]?.[j] ?? 0) * sensitivity;
+    }
   }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
-  .wrap{max-width:1100px;margin:0 auto;padding:16px}
-  .grid{display:grid;grid-template-columns:380px 1fr;gap:18px}
-  .card{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:14px}
-  h1{font-size:20px;margin:0 0 6px}
-  .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{padding:6px;border-bottom:1px solid var(--border)}
-  th{text-align:left;color:var(--muted)}
-  input[type=number]{width:64px}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-  button{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
-  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .help{font-size:13px;color:var(--muted)}
-  .chartbox{aspect-ratio:1/1; width:100%; max-width:680px; margin:auto; background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center}
-  svg{width:100%;height:100%}
-  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="grid">
-    <div class="card">
-      <h1>Faktoren & Werte</h1>
-      <div class="meta">Werte 1–10 anpassen oder per Konfigurator von der Hauptseite übernehmen.</div>
-      <div class="toolbar">
-        <button id="resetBtn">Zurücksetzen</button>
-        <button id="fillBtn">Alles = 5</button>
-        <button id="randomBtn">Zufällig</button>
-        <button id="copyBtn">Werte kopieren</button>
+  for (let i = 0; i < n; i++) {
+    if ((deltas[i] || 0) !== 0) acc[i] = base[i] + deltas[i];
+  }
+  return acc.map((v) => clampInt(v));
+}
+
+function PolarLabelTick(props: any) {
+  const { x, y, payload, textAnchor } = props;
+  const raw: string = payload?.value ?? "";
+  const words = String(raw).split(" ");
+  const lines: string[] = [];
+  let current = "";
+  const maxLen = 20;
+  for (const w of words) {
+    if ((current + " " + w).trim().length > maxLen) {
+      if (current.length) lines.push(current);
+      current = w;
+    } else {
+      current = (current ? current + " " : "") + w;
+    }
+  }
+  if (current.length) lines.push(current);
+  const lineHeight = 14;
+  const total = lines.length;
+  const startDy = -(lineHeight * (total - 1)) / 2;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor={textAnchor} fontSize={13}>
+        {lines.map((ln, idx) => (
+          <tspan key={idx} x={0} dy={idx === 0 ? startDy : lineHeight}>
+            {ln}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * Overlay-Layer: Ziffern 1..10 auf JEDEM Strahl.
+ * Wir messen die Containergröße und projizieren für jede Achse (Faktor) und jeden Level (1..10)
+ * die Position mit Polar-Koordinaten (12 Uhr = 0, im Uhrzeigersinn).
+ */
+function AxisNumbersOverlay({ count }: { count: number }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        const cr = e.contentRect;
+        setSize({ w: cr.width, h: cr.height });
+      }
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // Render children as absolute SVG overlay
+  const cx = size.w / 2;
+  const cy = size.h / 2;
+  // gleiche Skalierung wie RadarChart outerRadius="95%"
+  const outerR = Math.min(size.w, size.h) * 0.95 * 0.5;
+
+  const labels: React.ReactNode[] = [];
+  for (let i = 0; i < count; i++) {
+    // 12 Uhr = -90°, im Uhrzeigersinn weiter
+    const angle = (-2 * Math.PI * i) / count - Math.PI / 2;
+    for (let lvl = 1; lvl <= 10; lvl++) {
+      const t = (lvl - 1) / 9; // 0..1
+      const r = outerR * t;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      // kleines Offset entlang des Strahls, damit die 1 nicht direkt im Zentrum klebt
+      const off = 8;
+      const x2 = x + Math.cos(angle) * (lvl === 1 ? off : 0);
+      const y2 = y + Math.sin(angle) * (lvl === 1 ? off : 0);
+      labels.push(
+        <text
+          key={`axnum-${i}-${lvl}`}
+          x={x2}
+          y={y2}
+          fontSize={10}
+          textAnchor="middle"
+          alignmentBaseline="middle"
+          fill="#6b7280" // neutral-500
+        >
+          {lvl}
+        </text>
+      );
+    }
+  }
+
+  return (
+    <div ref={ref} className="pointer-events-none absolute inset-0">
+      <svg width={size.w} height={size.h}>
+        {labels}
+      </svg>
+    </div>
+  );
+}
+
+export default function InteractiveFactorMap() {
+  const factors = MODEL.factors as readonly string[];
+  const influence = MODEL.influence as number[][];
+  const n = factors.length;
+
+  const [ist, setIst] = useState<number[]>(Array(n).fill(5));
+  const [istBaseline, setIstBaseline] = useState<number[]>(Array(n).fill(5));
+  const [targets, setTargets] = useState<number[]>(Array(n).fill(5));
+  const [sensitivity, setSensitivity] = useState<number>(0.25);
+  const [smartTip, setSmartTip] = useState<string>("");
+
+  const [goals, setGoals] = useState<number[]>(Array(n).fill(0));
+  const [driverLimit, setDriverLimit] = useState<number>(5);
+
+  const handleIstChange = (i: number, v: number) => {
+    const val = clampInt(v);
+    setIst((prev) => prev.map((x, j) => (j === i ? val : x)));
+    setTargets((prev) => prev.map((x, j) => (j === i ? val : x)));
+    setIstBaseline((prev) => prev.map((x, j) => (j === i ? val : x)));
+  };
+
+  const soll = useMemo(() => {
+    const deltas = targets.map((t, i) => clampInt(t) - istBaseline[i]);
+    return propagate(istBaseline, deltas, influence, sensitivity);
+  }, [istBaseline, targets, influence, sensitivity]);
+
+  const radarData = useMemo(
+    () =>
+      factors.map((name, i) => ({ subject: name, IST: ist[i], SOLL: soll[i] })),
+    [factors, ist, soll]
+  );
+
+  const setTargetValue = (i: number, v: number) =>
+    setTargets((prev) => prev.map((x, j) => (j === i ? clampInt(v) : x)));
+
+  const freezeIst = () => {
+    setIstBaseline(ist.slice());
+    setSmartTip("IST wurde eingefroren. Baseline aktualisiert.");
+  };
+
+  const resetSoll = () => {
+    setTargets(istBaseline.slice());
+    setSmartTip("SOLL zurückgesetzt (Ziele = Baseline). Wenn Baseline = IST, dann SOLL = IST.");
+  };
+
+  const smartTransformation = () => {
+    const base = istBaseline;
+    const m = influence;
+    const N = n;
+
+    let bestI = 0;
+    let bestJ = 1;
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const trialTargets = base.slice();
+        trialTargets[i] = clampInt(base[i] + 2);
+        trialTargets[j] = clampInt(base[j] + 2);
+        const deltas = trialTargets.map((t, idx) => t - base[idx]);
+        const res = propagate(base, deltas, m, sensitivity);
+        let score = 0;
+        for (let k = 0; k < N; k++) {
+          const diff = res[k] - base[k];
+          if (diff > 0) score += diff;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestI = i;
+          bestJ = j;
+        }
+      }
+    }
+
+    const nextTargets = base.slice();
+    nextTargets[bestI] = clampInt(base[bestI] + 2);
+    nextTargets[bestJ] = clampInt(base[bestJ] + 2);
+    setTargets(nextTargets);
+    setSmartTip(
+      `Smart transformation: Verbesserung bei "${factors[bestI]}" und "${factors[bestJ]}" (+2 Punkte) bringt den größten Gesamteffekt (~+${bestScore}).`
+    );
+  };
+
+  const sollClass = (i: number): string => {
+    if (targets[i] !== ist[i]) return "text-green-600 font-semibold"; // manuell geändert
+    if (soll[i] !== targets[i]) return "text-green-800 font-semibold"; // durch Propagation verändert
+    return "text-neutral-800"; // unverändert
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-neutral-50 p-6 md:p-10">
+      <div className="mx-auto max-w-7xl grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>1) Standortbestimmung und Ziel-Werte</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-12 text-xs text-muted-foreground">
+              <div className="col-span-6 md:col-span-6">Faktor</div>
+              <div className="col-span-2 text-right">IST</div>
+              <div className="col-span-2 text-right">Ziel (manuell)</div>
+              <div className="col-span-2 text-right">SOLL (berechnet)</div>
+            </div>
+
+            <div className="space-y-3">
+              {factors.map((f, i) => (
+                <div key={i} className="grid grid-cols-12 items-center gap-2">
+                  <div className="col-span-6 md:col-span-6 text-sm md:text-base font-medium leading-tight whitespace-normal break-words" title={f}>
+                    {i + 1}. {f}
+                  </div>
+
+                  <div className="col-span-2 flex justify-end">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={1}
+                      className="w-20"
+                      value={ist[i]}
+                      onChange={(e) => {
+                        const num = clampInt(parseInt(e.target.value || "0", 10));
+                        handleIstChange(i, num);
+                      }}
+                    />
+                  </div>
+
+                  <div className="col-span-2 flex justify-end">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={1}
+                      className={`w-20 ${targets[i] !== istBaseline[i] ? 'text-green-600 font-semibold' : ''}`}
+                      value={targets[i]}
+                      onChange={(e) => {
+                        const num = clampInt(parseInt(e.target.value || "0", 10));
+                        setTargetValue(i, num);
+                      }}
+                    />
+                  </div>
+
+                  <div className="col-span-2 flex justify-end items-center gap-2">
+                    {(() => {
+                      const base = istBaseline[i];
+                      const isManual = targets[i] !== base;
+                      const computed = soll[i];
+                      const unchanged = computed === base;
+                      const cls = unchanged
+                        ? 'text-neutral-800'
+                        : isManual
+                        ? 'text-green-600 font-semibold'
+                        : 'text-green-800 font-semibold';
+                      const diff = computed === ist[i]
+                        ? '+0'
+                        : computed > ist[i]
+                        ? `+${computed - ist[i]}`
+                        : `-${ist[i] - computed}`;
+                      return (
+                        <>
+                          <span className={`text-xs ${cls}`}>{diff}</span>
+                          <span className={`w-12 text-right ${cls}`}>{computed}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Button variant="outline" onClick={freezeIst}>IST einfrieren</Button>
+              <Button variant="outline" onClick={resetSoll}>SOLL zurücksetzen</Button>
+              <Button onClick={smartTransformation}>Smart transformation</Button>
+            </div>
+
+            {smartTip && <div className="text-xs text-muted-foreground">{smartTip}</div>}
+
+            <div>
+              <label className="text-xs text-muted-foreground">Sensitivität der Kopplungen</label>
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0.05}
+                  max={0.5}
+                  step={0.05}
+                  value={sensitivity}
+                  onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                />
+                <div className="text-sm w-24 text-right">{sensitivity.toFixed(2)}</div>
+              </div>
+            </div>
+
+            <div className="text-xs text-muted-foreground">
+              SOLL wird relativ zur <strong>Baseline</strong> berechnet. Nutze „IST einfrieren“, um die Baseline auf den aktuellen IST-Stand zu setzen.
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>2) Spinnennetz</span>
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-[900px]">
+            <div className="relative w-full h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="95%" startAngle={90} endAngle={-270}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="subject" tickMargin={24} tick={<PolarLabelTick />} />
+                  <PolarRadiusAxis angle={30} domain={[1, 10]} tick={false} />
+                  <Radar name="IST" dataKey="IST" stroke="#2563eb" fill="#2563eb" strokeWidth={2.5} fillOpacity={0.22} />
+                  <Radar name="SOLL (Prognose)" dataKey="SOLL" stroke="#16a34a" fill="#16a34a" strokeDasharray="5 3" strokeWidth={2} fillOpacity={0.12} />
+                  <Tooltip formatter={(v: number) => clampInt(v)} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+              {/* Overlay mit Ziffern 1..10 auf jedem Strahl */}
+              <AxisNumbersOverlay count={n} />
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <table id="tbl">
-        <thead><tr><th>Faktor</th><th style="text-align:right">Wert</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="help">Tipp: Von der Hauptseite können Vorschlagswerte via <code>postMessage</code> gesendet werden (Typ: <code>preload-scores</code>).</div>
     </div>
-
-    <div class="card">
-      <h1>Radar</h1>
-      <div class="meta">Das Diagramm aktualisiert sich live bei jeder Änderung.</div>
-      <div class="chartbox"><svg id="radar" viewBox="0 0 600 600" role="img" aria-label="Radar Chart"></svg></div>
-    </div>
-  </div>
-</div>
-
-<script>
-/* ------------------ Faktoren-Setup ------------------ */
-const FACTORS = [
- 'Personalentwicklung & Lernbereitschaft',
- 'Führungsverhalten',
- 'Stakeholderbeziehungen',
- 'Prozesse',
- 'Informationsfluss & Kommunikation',
- 'Technologie',
- 'Vision & Werte',
- 'Motivation & Arbeitsatmosphäre',
- 'Innovationsfreude',
- 'Fehler- & Konfliktkultur',
- 'Produkte & Dienstleistungen',
- 'Ressourceneffizienz & Nachhaltigkeit'
-];
-
-let scores = FACTORS.map(() => 5); // Start mit 5ern
-
-/* ------------------ UI Aufbau ------------------ */
-const tbody = document.querySelector('#tbl tbody');
-function renderTable(){
-  tbody.innerHTML = FACTORS.map((f,i)=>`
-    <tr>
-      <td>${f}</td>
-      <td style="text-align:right">
-        <input type="number" min="1" max="10" step="1" value="${scores[i]}" data-idx="${i}">
-      </td>
-    </tr>
-  `).join('');
-  tbody.querySelectorAll('input').forEach(inp=>{
-    inp.addEventListener('input', e=>{
-      const idx = +e.target.dataset.idx;
-      let v = parseInt(e.target.value||'0',10); if(isNaN(v)) v=1;
-      scores[idx] = Math.max(1, Math.min(10, v));
-      drawRadar();
-    });
-  });
+  );
 }
-
-/* ------------------ Radar (SVG) ------------------ */
-const svg = document.getElementById('radar');
-const cx=300, cy=300, R=240, rings=5;
-
-function polarToXY(angleRad, radius){
-  return [cx + radius*Math.sin(angleRad), cy - radius*Math.cos(angleRad)];
-}
-
-function drawGrid(){
-  // clear
-  svg.innerHTML = '';
-  // concentric rings
-  for(let r=R; r>0; r-=R/rings){
-    const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    circ.setAttribute('cx', cx); circ.setAttribute('cy', cy);
-    circ.setAttribute('r', r);
-    circ.setAttribute('fill','none');
-    circ.setAttribute('stroke','#e5e7eb');
-    svg.appendChild(circ);
-  }
-  // axes + labels
-  FACTORS.forEach((f, i)=>{
-    const a = i * (2*Math.PI/FACTORS.length);
-    const [x,y] = polarToXY(a, R);
-    const axis = document.createElementNS('http://www.w3.org/2000/svg','line');
-    axis.setAttribute('x1', cx); axis.setAttribute('y1', cy);
-    axis.setAttribute('x2', x);  axis.setAttribute('y2', y);
-    axis.setAttribute('stroke', '#e5e7eb');
-    svg.appendChild(axis);
-
-    // label
-    const [lx,ly] = polarToXY(a, R+18);
-    const lab = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lab.setAttribute('x', lx); lab.setAttribute('y', ly);
-    lab.setAttribute('fill', '#6b7280'); lab.setAttribute('font-size','11'); lab.setAttribute('text-anchor','middle');
-    lab.textContent = f;
-    svg.appendChild(lab);
-  });
-}
-
-function drawPolygon(){
-  const pts = scores.map((v,i)=>{
-    const a = i * (2*Math.PI/FACTORS.length);
-    const r = (v/10)*R;
-    const [x,y]=polarToXY(a,r);
-    return `${x},${y}`;
-  }).join(' ');
-  const polyFill = document.createElementNS('http://www.w3.org/2000/svg','polygon');
-  polyFill.setAttribute('points', pts);
-  polyFill.setAttribute('fill','rgba(37,99,235,0.16)');
-  polyFill.setAttribute('stroke','#2563eb');
-  polyFill.setAttribute('stroke-width','2');
-  svg.appendChild(polyFill);
-}
-
-function drawRadar(){
-  drawGrid(); drawPolygon();
-}
-
-/* ------------------ Controls ------------------ */
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  scores = FACTORS.map(()=>5);
-  renderTable(); drawRadar();
-});
-document.getElementById('fillBtn').addEventListener('click', ()=>{
-  scores = FACTORS.map(()=>5);
-  renderTable(); drawRadar();
-});
-document.getElementById('randomBtn').addEventListener('click', ()=>{
-  scores = FACTORS.map(()=> 1 + Math.floor(Math.random()*10) );
-  renderTable(); drawRadar();
-});
-document.getElementById('copyBtn').addEventListener('click', ()=>{
-  const data = FACTORS.map((f,i)=>({factor:f, value:scores[i]}));
-  navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
-});
-
-/* ------------------ postMessage: preload-scores ------------------ */
-window.addEventListener('message', (e)=>{
-  const msg = e.data;
-  if(!msg || typeof msg !== 'object') return;
-  if(msg.type === 'preload-scores' && Array.isArray(msg.payload)){
-    // payload: [{factor, value}]
-    const map = new Map(msg.payload.map(o=>[o.factor, o.value]));
-    scores = FACTORS.map(f => {
-      const v = map.get(f);
-      return Math.max(1, Math.min(10, Number.isFinite(v)? v : 5));
-    });
-    renderTable(); drawRadar();
-  }
-});
-
-/* ------------------ Init ------------------ */
-renderTable(); drawRadar();
-// optional: Parent informieren, falls du Auto-Resize möchtest
-try { parent.postMessage({type:'resize-iframe', height: document.body.scrollHeight }, '*'); } catch {}
-</script>
-</body>
-</html>
